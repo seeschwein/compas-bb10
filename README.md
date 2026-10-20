@@ -19,6 +19,7 @@ It is **not** an attempt to blindly compile the full CoMaps codebase for BB10. T
 - Runtime dependencies: `libstdc++.so.6`, `libm.so.2`, `libgcc_s.so.1`, `libsocket.so.3`, `libc.so.3`
 - **Private runtime bundle** includes `libstdc++.so.6` (from BB10 SDK GCC 4.8.3); `libgcc_s.so.1` sourced from host (needs matching ARM version)
 - **Cascades probe app scaffolded** in `bbndk-starter-kit/projects/compas-probes/`
+- **Map prototype scaffolded** in this repo (`src/`, `assets/`, `CMakeLists.txt`, `bar/bar-descriptor.xml`)
 - **TLS 1.0 workaround** applied in XIAZY Dockerfile for `blackberry-deploy`
 
 ## Toolchains
@@ -79,7 +80,7 @@ RUN echo "jdk.tls.disabledAlgorithms=" >> ${JAVA_HOME}/conf/security/java.securi
 
 Example build & deploy invocation:
 ```sh
-# Build the BAR
+# Build the BAR (probes)
 docker run --rm -v /path/to/project:/src -w /src \
   ghcr.io/xiazy/blackberry10-toolchain:latest \
   bb10-build /src
@@ -102,13 +103,25 @@ compas-bb10/
 │   ├── thread_probe.cpp
 │   ├── loader_probe.cpp
 │   └── plugin.cpp
+├── src/                       # Map prototype (Cascades app)
+│   ├── main.cpp
+│   ├── TileCache.h/cpp
+│   ├── TileNetwork.h/cpp
+│   └── (future: map renderer, GPS, GPX, etc.)
+├── assets/                    # QML UI & resources
+│   ├── main.qml
+│   ├── map/MapView.qml
+│   └── qml.qrc
+├── bar/                       # BAR packaging for map app
+│   ├── bar-descriptor.xml
+│   └── icon.png
 ├── docs/                      # Documentation
 │   ├── 00-project-charter.md
 │   ├── 01-toolchain-status.md
 │   ├── 02-on-device-probes.md
 │   ├── 03-deployment-without-ssh.md
 │   └── 04-roadmap.md
-├── bar/                       # Legacy BAR packaging (deprecated)
+├── CMakeLists.txt             # CMake build for map app (XIAZY toolchain)
 ├── .claude/skills/bb10-dev.md # BB10 development skill
 └── README.md
 
@@ -149,14 +162,17 @@ bbndk-starter-kit/             # Companion repo (separate)
 
 Each configuration must pass the same probe suite. Compilation alone is not success.
 
-### Milestone 3: Compas Prototype
+### Milestone 3: Compas Prototype (map prototype scaffolded ✅)
 
 Build a Cascades-based OSM viewer:
-- Online raster tiles (MapView / WebView)
-- Pan, zoom, bookmarks, location display
-- Local tile cache (SQLite)
-- GPX import/export
-- A clean data layer, not CoMaps' `.mwm` format
+- [x] Online raster tiles (MapView custom control with `onPaintRequested`)
+- [x] Tile cache with SQLite + in-memory LRU (`TileCache`)
+- [x] Network tile fetching with retry (`TileNetwork`)
+- [ ] Pan, zoom, bookmarks, location display (GPS)
+- [ ] Local tile cache management (pruning, max size)
+- [ ] GPX import/export
+- [ ] Settings screen (tile server URL, cache size, default location)
+- [ ] A clean data layer, not CoMaps' `.mwm` format
 
 This establishes a useful BB10 maps app without committing to the much larger task of porting CoMaps' C++ map, search, routing, and rendering engine.
 
@@ -177,6 +193,34 @@ If needed, introduce native C++ components for:
 
 Use Cascades for the UI and Go or C++ for application services. Avoid making Go responsible for the low-latency rendering loop.
 
+## Building the Map Prototype
+
+```bash
+# From compas-bb10 root:
+docker run --rm -v "$PWD":/src -w /src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  bb10-build /src
+
+# Or using the bbndk-starter-kit container:
+cd bbndk-starter-kit
+./tools/bbndk build /path/to/compas-bb10
+```
+
+### Packaging & Deploying the Map App
+
+```bash
+# Package BAR
+docker run --rm -v "$PWD":/src -w /src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  blackberry-nativepackager -devMode -package compas.bar bar/bar-descriptor.xml -configuration Device-Debug
+
+# Deploy to device
+docker run --rm --network host -v "$PWD":/src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  blackberry-deploy -installApp -device <DEVICE_IP> -password <DEV_PASSWORD> \
+  /src/compas.bar
+```
+
 ## References
 
 - XIAZY BlackBerry 10 toolchain: https://github.com/XIAZY/blackberry10-toolchain
@@ -187,3 +231,4 @@ Use Cascades for the UI and Go or C++ for application services. Avoid making Go 
 - CoMaps: https://codeberg.org/comaps/comaps
 - BerryCore: https://github.com/sw7ft/BerryCore
 - fen-blackberry (Rust on BB10): https://github.com/acmiyaguchi/fen-blackberry
+- s60-maps (inspiration for map prototype): https://github.com/artem78/s60-maps
