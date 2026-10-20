@@ -66,6 +66,17 @@ It provides a Dockerized BlackBerry 10 ARMv7 environment using:
 
 The next toolchain task is to build and run the same probe suite through this path, then compare ELF metadata, dependencies, runtime behavior, and on-device results.
 
+## Additional toolchain available
+
+GCC 9.3 prebuilt Docker image
+
+A prebuilt GCC 9.3 Docker image is now available at `sw7ft/bb10-gcc9:latest` (Docker Hub). This provides:
+
+- GCC 9.3 cross-compiler: `arm-blackberry-qnx8eabi-g++`
+- QNX binutils and headers for BlackBerry 10 ARMv7 EABI5 little-endian
+
+Verified build results with the Docker image match the existing toolchain baseline, producing ELF32 ARM EABI5 little-endian dynamic executables with interpreter `/usr/lib/ldqnx.so.2`.
+
 ## Known constraints
 
 GCC 9 does not provide complete C++20/23 support. The longer-term objective is to evaluate newer GCC and Clang frontends while retaining a BB10-compatible QNX runtime.

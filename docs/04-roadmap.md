@@ -4,10 +4,11 @@
 
 **Goal:** prove that a modern compiler-produced binary starts and runs on a BlackBerry 10 device.
 
-- Package the four existing probes and `libprobe.so` into a BAR.
+- Package this probe suite (filesystem_probe, posix_probe, thread_probe, loader_probe) and `libprobe.so` into a BAR.
 - Bundle only `libstdc++.so.6` and `libgcc_s.so.1`.
 - Capture results in the application sandbox.
 - Deploy through `blackberry-deploy`; no SSH required.
+- Use the GCC 9.3 Docker image `sw7ft/bb10-gcc9:latest` or the cross-compiler toolchain for building.
 
 **Definition of done:** all four probes report `PASS` and exit status 0 in the retrieved log.
 
