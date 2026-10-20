@@ -1,21 +1,23 @@
 #ifndef TILECACHE_H
 #define TILECACHE_H
 
-#include <QObject>
-#include <QImage>
-#include <QString>
-#include <QMutex>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QVariant>
-#include <QMap>
-#include <QPair>
+#include <QtCore/QObject>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include <QtCore/QVariant>
+#include <QtCore/QMap>
+#include <QtCore/QPair>
+#include <QtCore/QMutex>
+#include <QtCore/QMutexLocker>
+#include <QtCore/QStringBuilder>
+#include <QtGui/QImage>
+#include <QtSql/QSqlDatabase>
 
 class TileCache : public QObject
 {
     Q_OBJECT
 public:
-    explicit TileCache(const QString& dbPath, QObject* parent = nullptr);
+    explicit TileCache(const QString& dbPath, QObject* parent = 0);
     ~TileCache();
 
     /** Return a QImage if present in the cache (memory or disk). Returns a null QImage if missing. */
@@ -36,7 +38,7 @@ private:
 
     // Simple in‑memory LRU: key = (z,x,y), value = QImage
     // We limit the memory cache to a reasonable number of entries (e.g. 64).
-    QMap<QPair<int,QPair<int,int>>, QImage> memCache;
+    QMap<QPair<int,int>, QImage> memCache;
     static const int MEM_CACHE_LIMIT = 64;
 
     void initDb();

@@ -1,34 +1,46 @@
 #include "TileNetwork.h"
-#include <QDebug>
-#include <QNetworkReply>
-#include <QUrl>
+#include "TileCache.h"
+#include <QtCore/QDebug>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkReply>
+#include <QtNetwork/QNetworkRequest>
+#include <QtCore/QUrl>
+#include <QtGui/QImage>
 
 TileNetwork::TileNetwork(TileCache* cache, QObject* parent)
-    : QObject(parent), m_cache(cache)
+    : QObject(parent), m_cache(cache), m_nam(this)
 {
-    // Optionally set a custom User-Agent so tile servers know who you are
-    m_nam.setHeader(QNetworkRequest::UserAgentHeader,
-                   "CompasBB10/1.0 (+https://github.com/yourname/compas-bb10)");
+    // Qt 4.8.6: User-Agent is set via setRawHeader on the request, not on the manager
+    // We'll set it per-request in fetchTile
 }
 
 TileNetwork::~TileNetwork() = default;
 
 void TileNetwork::fetchTile(int z, int x, int y)
 {
-    QString url = QStringLiteral("https://tile.openstreetmap.org/%1/%2/%3.png")
+    // Qt 4.8.6: use QString for string formatting
+    QString url = QString("https://tile.openstreetmap.org/%1/%2/%3.png")
                   .arg(z).arg(x).arg(y);
-    QNetworkRequest req(QUrl(url));
+    QNetworkRequest req((QUrl(url)));
+    req.setRawHeader(QByteArray("User-Agent"),
+                     QByteArray("CompasBB10/1.0 (+https://github.com/yourname/compas-bb10)"));
 
     // Store z,x,y as properties so we can retrieve them in the finished slot
     QNetworkReply* reply = m_nam.get(req);
     reply->setProperty("_z", z);
     reply->setProperty("_x", x);
     reply->setProperty("_y", y);
-    connect(reply, &QNetworkReply::finished, this, &TileNetwork::onReplyFinished);
+
+    // Qt 4.8.6: string-based connect (finished is protected in Qt 4)
+    connect(reply, SIGNAL(finished()), this, SLOT(onReplyFinished()));
 }
 
-void TileNetwork::onReplyFinished(QNetworkReply* reply)
+void TileNetwork::onReplyFinished()
 {
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply)
+        return;
+
     if (reply->error() != QNetworkReply::NoError) {
         qWarning() << "TileNetwork: error fetching tile:" << reply->errorString();
         reply->deleteLater();

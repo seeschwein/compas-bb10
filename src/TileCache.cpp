@@ -1,16 +1,26 @@
 #include "TileCache.h"
-#include <QSqlError>
-#include <QDebug>
-#include <QDir>
-#include <QStandardPaths>
+#include <QtSql/QSqlError>
+#include <QtSql/QSqlQuery>
+#include <QtCore/QDebug>
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include <QtCore/QVariant>
+#include <QtCore/QMap>
+#include <QtCore/QPair>
+#include <QtCore/QMutex>
+#include <QtCore/QMutexLocker>
+#include <QtCore/QBuffer>
+#include <QtCore/QIODevice>
+#include <QtCore/QByteArray>
+#include <QtCore/QList>
 
 TileCache::TileCache(const QString& dbPath, QObject* parent)
     : QObject(parent)
 {
-    QFileInfo fi(dbPath);
-    QDir().mkpath(fi.absolutePath());
-
-    db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"));
+    QDir().mkpath(dbPath);
+    db = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"));
     db.setDatabaseName(dbPath);
     if (!db.open()) {
         qWarning() << "TileCache: cannot open DB:" << db.lastError().text();
@@ -44,21 +54,10 @@ void TileCache::initDb()
     }
 }
 
-/* -----------------------------------------------------------------
-   Helper: build a cache‑key that works with QMap<QPair<...>>
-   ----------------------------------------------------------------- */
-static QPair<int, QPair<int,int>> makeKey(int z, int x, int y)
-{
-    return qMakePair(z, qMakePair(x, y));
-}
-
-/* -----------------------------------------------------------------
-   Public API – getImage
-   ----------------------------------------------------------------- */
 QImage TileCache::getImage(int z, int x, int y)
 {
     QMutexLocker locker(&mtx);
-    auto key = makeKey(z, x, y);
+    auto key = qMakePair(z, x);
     if (memCache.contains(key))
         return memCache.value(key);
 
@@ -83,16 +82,13 @@ QImage TileCache::getImage(int z, int x, int y)
     return img;
 }
 
-/* -----------------------------------------------------------------
-   Public API – putImage
-   ----------------------------------------------------------------- */
 void TileCache::putImage(int z, int x, int y, const QImage& img)
 {
     if (img.isNull())
         return;
 
     QMutexLocker locker(&mtx);
-    auto key = makeKey(z, x, y);
+    auto key = qMakePair(z, x);
     if (memCache.size() >= MEM_CACHE_LIMIT) {
         memCache.remove(memCache.keys().first());
     }
@@ -117,9 +113,6 @@ void TileCache::putImage(int z, int x, int y, const QImage& img)
     }
 }
 
-/* -----------------------------------------------------------------
-   Optional pruning – simple size based LRU (timestamp column would be better)
-   ----------------------------------------------------------------- */
 void TileCache::pruneToSize(qint64 maxSizeBytes)
 {
     QSqlQuery q(db);

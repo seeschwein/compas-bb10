@@ -14,11 +14,10 @@ CustomControl {
 
     // Context properties set from C++
     property var _tileCache: null
-    property var _networkMgr: null
 
     onPaintRequested: {
         var ctx = paintRequested.context;
-        if (!_tileCache || !_networkMgr) {
+        if (!_tileCache) {
             ctx.fillColor = "#ffff00";
             ctx.fillRect(0, 0, width, height);
             ctx.drawText(10, 20, "MapView not initialized");
@@ -47,7 +46,6 @@ CustomControl {
                     ctx.fillRect(px, py, tilePx, tilePx);
                     ctx.fillColor = "#999999";
                     ctx.drawText(px+2, py+12, "loading…");
-                    _networkMgr.fetchTile(tx, ty, zoom);
                 }
             }
         }

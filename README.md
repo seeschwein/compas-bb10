@@ -19,8 +19,89 @@ It is **not** an attempt to blindly compile the full CoMaps codebase for BB10. T
 - Runtime dependencies: `libstdc++.so.6`, `libm.so.2`, `libgcc_s.so.1`, `libsocket.so.3`, `libc.so.3`
 - **Private runtime bundle** includes `libstdc++.so.6` (from BB10 SDK GCC 4.8.3); `libgcc_s.so.1` sourced from host (needs matching ARM version)
 - **Cascades probe app scaffolded** in `bbndk-starter-kit/projects/compas-probes/`
-- **Map prototype scaffolded** in this repo (`src/`, `assets/`, `CMakeLists.txt`, `bar/bar-descriptor.xml`)
-- **TLS 1.0 workaround** applied in XIAZY Dockerfile for `blackberry-deploy`
+- **Map prototype built & compiles** in this repo (`src/`, `assets/`, `CMakeLists.txt`, `bar/bar-descriptor.xml`) — successfully builds with XIAZY Clang 19
+
+
+
+---
+
+## Quickstart: Reproducing from Scratch
+
+For a new developer starting with a fresh checkout, follow these steps to reproduce the working state:
+
+### 1. Prerequisites
+- Docker installed
+- Git
+- (Optional) Physical BB10 device in Development Mode, or QEMU simulator image
+
+### 2. Clone & Set Up Toolchain
+```bash
+# Clone repos
+git clone https://github.com/<your-org>/compas-bb10.git
+git clone https://github.com/seeschwein/bbndk-starter-kit.git
+cd compas-bb10
+
+# Pull prebuilt XIAZY Clang toolchain (includes TLS 1.0 fix, blackberry-deploy, etc.)
+docker pull ghcr.io/xiazy/blackberry10-toolchain:latest
+```
+
+### 3. Build Probe Suite (Milestone 1)
+```bash
+cd compas-bb10/probes
+docker run --rm -v "$PWD":/src -w /src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  make
+```
+Expected: 4 probe executables + `libprobe.so` in `build/arm/`
+
+**Known roadblock**: `libgcc_s.so.1` for ARMv7 is not in the SDK. You must either:
+- Build from GCC 4.8.3 sources (`gcc-4.8.3/libgcc/...` targeting armv7-softfp), or
+- Extract from a rooted BB10 device (`/usr/lib/libgcc_s.so.1`)
+
+### 4. Build Map Prototype (Milestone 3)
+```bash
+cd compas-bb10
+docker run --rm -v "$PWD":/src -w /src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  bb10-build /src
+```
+Expected: `build/cmake/arm/o.le-v7-g/compas` executable
+
+**Common pitfalls already solved**:
+- `QStringLiteral` → use `QLatin1String`
+- `QNetworkRequest::UserAgentHeader` → use `setRawHeader` with `QByteArray`
+- `QNetworkReply::finished()` protected → use string-based `connect(..., SIGNAL(finished()), ..., SLOT(...))`
+- `QImage` forward declaration → must include `<QtGui/QImage>` and link `QtGui`
+- Compiler defaults to `-std=gnu++98` → force `-std=gnu++11 -fexceptions -frtti -fno-use-cxa-atexit` in CMake
+- MOC must run on all `Q_OBJECT` classes (`TileCache.h`, `TileNetwork.h`)
+
+### 5. Package BAR (Map App)
+```bash
+docker run --rm -v "$PWD":/src -w /src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  blackberry-nativepackager -devMode -package compas.bar bar/bar-descriptor.xml -configuration Device-Debug
+```
+
+### 6. Deploy to Device (Development Mode ON)
+```bash
+docker run --rm --network host -v "$PWD":/src \
+  ghcr.io/xiazy/blackberry10-toolchain:latest \
+  blackberry-deploy -installApp -device <DEVICE_IP> -password <DEV_PASSWORD> \
+  /src/compas.bar
+```
+
+### 7. Verify
+- App launches on device
+- Map tiles load (network) and display in `MapView`
+- Tile cache persists to SQLite DB at `/accounts/1000/appdata/com.compas.app/tilecache.db`
+
+### 8. Run Probes on Device (Milestone 1 completion)
+Use the cascades probe app in `bbndk-starter-kit/projects/compas-probes/`:
+- Copy probe binaries + `libprobe.so` + `libstdc++.so.6` + `libgcc_s.so.1` into its `assets/probes/`
+- Build its BAR, deploy, tap "Run Probes"
+- Retrieve `probe-results.txt` → verify 4× PASS
+
+---
 
 ## Toolchains
 
@@ -162,12 +243,14 @@ bbndk-starter-kit/             # Companion repo (separate)
 
 Each configuration must pass the same probe suite. Compilation alone is not success.
 
-### Milestone 3: Compas Prototype (map prototype scaffolded ✅)
+### Milestone 3: Compas Prototype (map prototype built ✅ — compiles & links)
 
 Build a Cascades-based OSM viewer:
 - [x] Online raster tiles (MapView custom control with `onPaintRequested`)
 - [x] Tile cache with SQLite + in-memory LRU (`TileCache`)
 - [x] Network tile fetching with retry (`TileNetwork`)
+- [x] CMake build system with Qt4 moc/rcc/uic integration
+- [x] BAR packaging descriptor (`bar/bar-descriptor.xml`)
 - [ ] Pan, zoom, bookmarks, location display (GPS)
 - [ ] Local tile cache management (pruning, max size)
 - [ ] GPX import/export
@@ -175,6 +258,8 @@ Build a Cascades-based OSM viewer:
 - [ ] A clean data layer, not CoMaps' `.mwm` format
 
 This establishes a useful BB10 maps app without committing to the much larger task of porting CoMaps' C++ map, search, routing, and rendering engine.
+
+**Current status**: The map prototype compiles and links successfully with XIAZY Clang 19. Next step is to package the BAR and test on device.
 
 ### Milestone 4: Offline Maps
 
@@ -228,7 +313,7 @@ docker run --rm --network host -v "$PWD":/src \
 - Prebuilt GCC 9 image: https://hub.docker.com/r/sw7ft/bb10-gcc9
 - Prebuilt XIAZY Clang image: `ghcr.io/xiazy/blackberry10-toolchain:latest`
 - BBNDK Starter Kit: https://github.com/seeschwein/bbndk-starter-kit
-- CoMaps: https://codeberg.org/comaps/comaps
+- [bb10-qt4-practices](bb10-qt4-practices.md) – Common Qt 4.8.6 workarounds and BB10 build practices
 - BerryCore: https://github.com/sw7ft/BerryCore
 - fen-blackberry (Rust on BB10): https://github.com/acmiyaguchi/fen-blackberry
 - s60-maps (inspiration for map prototype): https://github.com/artem78/s60-maps
