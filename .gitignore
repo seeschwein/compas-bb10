@@ -5,3 +5,4 @@ output/
 *.bar
 *.log
 device-stage/
+.DS_Store
