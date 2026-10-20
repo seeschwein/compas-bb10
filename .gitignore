@@ -1,0 +1,7 @@
+build/
+output/
+*.o
+*.so
+*.bar
+*.log
+device-stage/
