@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <qnx xmlns="http://www.qnx.com/schemas/application/1.0">
-    <id>com.compas.probes</id>
+    <id>com.compas.app</id>
     <versionNumber>1.0.0</versionNumber>
-    <name>Compas Probes</name>
-    <description>On-device compatibility probes for BlackBerry 10</description>
+    <name>Compas Maps</name>
+    <description>Offline-capable OpenStreetMap viewer for BlackBerry 10</description>
     <author>Compas Project</author>
     <authorId>compas</authorId>
     <copyright>2025 Compas Project</copyright>
-    <category>utility.other</category>
+    <category>maps.navigation</category>
     <buildId>1</buildId>
     <configuration>Device-Debug</configuration>
     <icon>
@@ -15,23 +15,20 @@
     </icon>
     <action>
         <type>application</type>
-        <name>run-probes.sh</name>
-        <arg>run-probes.sh</arg>
+        <name>compas</name>
+        <arg>compas</arg>
     </action>
     <env>
-        <var name="LD_LIBRARY_PATH">/app/native/probes</var>
+        <var name="LD_LIBRARY_PATH">/app/native</var>
     </env>
     <assets>
-        <asset path="probes/filesystem_probe">probes/filesystem_probe</asset>
-        <asset path="probes/posix_probe">probes/posix_probe</asset>
-        <asset path="probes/thread_probe">probes/thread_probe</asset>
-        <asset path="probes/loader_probe">probes/loader_probe</asset>
-        <asset path="probes/libprobe.so">probes/libprobe.so</asset>
-        <asset path="probes/libstdc++.so.6">probes/libstdc++.so.6</asset>
-        <asset path="probes/libgcc_s.so.1">probes/libgcc_s.so.1</asset>
-        <asset path="run-probes.sh">run-probes.sh</asset>
+        <asset path="arm/o.le-v7-g/compas">compas</asset>
+        <asset path="assets">assets</asset>
     </assets>
     <permissions>
+        <permission>access_internet</permission>
         <permission>access_shared</permission>
+        <permission>access_location_services</permission>
+        <permission>read_device_identifying_information</permission>
     </permissions>
 </qnx>
