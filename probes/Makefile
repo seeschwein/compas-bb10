@@ -1,5 +1,5 @@
 CXX ?= arm-blackberry-qnx8eabi-g++
-CXXFLAGS ?= -O2 -g -Wall -Wextra -std=c++17 -pthread -fPIC -fexceptions -frtti
+CXXFLAGS ?= -O2 -g -Wall -Wextra -std=gnu++17 -pthread -fPIC -fexceptions -frtti -fno-use-cxa-atexit -static-libgcc -static-libstdc++
 
 BUILD_DIR := build
 
@@ -18,7 +18,7 @@ all: $(PROBES) $(LIBPROBE)
 $(BUILD_DIR):
 	mkdir -p $@
 
-# Build each probe executable
+# Build each probe executable (static linking to avoid libgcc_s.so.1 dependency)
 $(BUILD_DIR)/%: probes/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $< -o $@ -ldl
 
