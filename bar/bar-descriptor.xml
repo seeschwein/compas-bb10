@@ -28,11 +28,11 @@
          a valid BB10 application entry point. -->
     <configuration name="Device-Debug">
         <platformArchitecture>armle-v7</platformArchitecture>
-        <asset path="arm/o.le-v7-g/compas" entry="true" type="Qnx/Elf">compas</asset>
+        <asset path="../build/cmake/arm/o.le-v7-g/compas" entry="true" type="Qnx/Elf">compas</asset>
     </configuration>
     <configuration name="Device-Release">
         <platformArchitecture>armle-v7</platformArchitecture>
-        <asset path="arm/o.le-v7-g/compas" entry="true" type="Qnx/Elf">compas</asset>
+        <asset path="../build/cmake/arm/o.le-v7-g/compas" entry="true" type="Qnx/Elf">compas</asset>
     </configuration>
 
     <!-- Ensure the bundled private libraries are found at run-time. -->

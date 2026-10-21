@@ -9,9 +9,20 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)  # gnu++11
 
+# Architecture define for ProbeRunner
+add_definitions(-DQT_ARCH=\"armv7-softfp\")
+
 # Qt4 moc/rcc/uic support (provided by XIAZY toolchain)
 include(BB10Qt4)
+qt4_wrap_cpp(MOC_SOURCES ProbeRunner.h)
 qt4_add_resources(QRC_SOURCES assets/qml.qrc)
+
+# CMake's Generic platform declares that it cannot build shared libraries
+# (Platform/Generic.cmake sets TARGET_SUPPORTS_SHARED_LIBS to FALSE), but the
+# BB10 toolchain can: BB10LinkRules.cmake defines CMAKE_<LANG>_CREATE_SHARED_LIBRARY
+# and bb10-c++ passes -shared straight through to the QNX linker.
+# Override the platform flag so add_library(... SHARED ...) works.
+set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
 
 # ---------------------------------------------------------------------------
 # The probe runner: the BAR entry point.  Must be an ELF binary -- a shell
@@ -19,6 +30,8 @@ qt4_add_resources(QRC_SOURCES assets/qml.qrc)
 # ---------------------------------------------------------------------------
 add_executable(compas-probes
     probe_runner.cpp
+    ProbeRunner.cpp
+    ${MOC_SOURCES}
     ${QRC_SOURCES}
 )
 
@@ -49,10 +62,11 @@ foreach(probe ${PROBE_SOURCES})
 endforeach()
 
 # The plugin shared library used by loader_probe to exercise dlopen/dlsym.
+# The target is named "probe" so that CMake produces "libprobe.so"
+# (the "lib" prefix and ".so" suffix are added automatically).
 add_library(probe SHARED plugin.cpp)
 set_target_properties(probe PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/arm/o.le-v7-g/probes"
-    OUTPUT_NAME "libprobe"
 )
 
 # ---------------------------------------------------------------------------
@@ -76,3 +90,46 @@ set_target_properties(compas-probes ${PROBE_SOURCES} probe PROPERTIES
 
 # Ensure executable name matches bar-descriptor.xml
 set_target_properties(compas-probes PROPERTIES OUTPUT_NAME "compas-probes")
+
+# ---------------------------------------------------------------------------
+# Stage the BAR assets
+#
+# The BAR descriptor lists assets by their path relative to the project
+# directory.  The probe binaries and the private runtime libraries therefore
+# have to be copied into assets/ before packaging.
+# ---------------------------------------------------------------------------
+set(STAGE_DIR "${CMAKE_SOURCE_DIR}/assets")
+set(STAGE_PROBES_DIR "${STAGE_DIR}/probes")
+set(STAGE_LIBS_DIR "${STAGE_DIR}/libs")
+
+# The SDK's libstdc++.so.6 always matches the compiler that produced the
+# binaries, so it is copied at build time rather than committed.
+# QNX_TARGET is an environment variable set by the toolchain image; fall back
+# to the image's default sysroot if it is not exported.
+if(DEFINED ENV{QNX_TARGET})
+    set(SDK_TARGET "$ENV{QNX_TARGET}")
+else()
+    set(SDK_TARGET "/opt/bb10-sdk/target/qnx6")
+endif()
+set(SDK_LIBSTDCXX "${SDK_TARGET}/armle-v7/lib/libstdc++.so.6")
+
+add_custom_target(stage-assets ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${STAGE_PROBES_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${STAGE_LIBS_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/arm/o.le-v7-g/probes/filesystem_probe" "${STAGE_PROBES_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/arm/o.le-v7-g/probes/posix_probe" "${STAGE_PROBES_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/arm/o.le-v7-g/probes/thread_probe" "${STAGE_PROBES_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/arm/o.le-v7-g/probes/loader_probe" "${STAGE_PROBES_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/arm/o.le-v7-g/probes/libprobe.so" "${STAGE_PROBES_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${SDK_LIBSTDCXX}" "${STAGE_LIBS_DIR}/"
+    DEPENDS compas-probes ${PROBE_SOURCES} probe
+    COMMENT "Staging BAR assets"
+    VERBATIM
+)
+add_dependencies(stage-assets compas-probes ${PROBE_SOURCES} probe)
