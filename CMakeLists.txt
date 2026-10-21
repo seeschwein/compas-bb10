@@ -1,3 +1,5 @@
+# Updated CMakeLists.txt to force static linking of libgcc
+
 cmake_minimum_required(VERSION 3.20)
 project(compas LANGUAGES CXX)
 
@@ -10,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)  # gnu++11
 
 # Qt4 moc/rcc/uic support (provided by XIAZY toolchain)
-include(BB10Qt4)
+include(CMake/BB10Qt4.cmake)
 qt4_wrap_cpp(MOC_SOURCES src/TileCache.h src/TileNetwork.h)
 qt4_add_resources(QRC_SOURCES assets/qml.qrc)
 
@@ -48,3 +50,6 @@ set_target_properties(compas PROPERTIES OUTPUT_NAME "compas")
 set_target_properties(compas PROPERTIES
     COMPILE_FLAGS "-std=gnu++11 -fexceptions -frtti -fno-use-cxa-atexit"
 )
+
+# Force static linking of libgcc to avoid missing libgcc_s.so.1
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc")
