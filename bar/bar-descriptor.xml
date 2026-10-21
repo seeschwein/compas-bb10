@@ -1,39 +1,53 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <qnx xmlns="http://www.qnx.com/schemas/application/1.0">
+
+    <!-- Universally unique application identifier. -->
     <id>com.compas.app</id>
-    <versionNumber>1.0.0</versionNumber>
+
+    <filename>compas</filename>
     <name>Compas Maps</name>
+    <versionNumber>1.0.0</versionNumber>
+    <buildId>1</buildId>
+
     <description>Offline-capable OpenStreetMap viewer for BlackBerry 10</description>
     <author>Compas Project</author>
     <authorId>compas</authorId>
     <copyright>2025 Compas Project</copyright>
     <category>maps.navigation</category>
-    <buildId>1</buildId>
-    <configuration>Device-Debug</configuration>
+
     <icon>
         <image>icon.png</image>
     </icon>
-    <action>
-        <type>application</type>
-        <name>compas</name>
-        <arg>compas</arg>
-    </action>
-    <env>
-        <var name="LD_LIBRARY_PATH">/app/native</var>
-    </env>
-    <assets>
-    <!-- All assets directory -->
-        <asset path="assets">assets</asset>
-    <!-- BUNDLED libraries -->
-        <asset path="assets/libs/libgcc_s.so.1">libs/libgcc_s.so.1</asset>
-        <asset path="assets/libs/libstdc++.so.6">libs/libstdc++.so.6</asset>
-        <asset path="arm/o.le-v7-g/compas">compas</asset>
-        <asset path="assets">assets</asset>
-    </assets>
+
+    <!-- Bundled private runtime libraries. -->
+    <asset path="icon.png">icon.png</asset>
+    <asset path="assets/libs/libgcc_s.so.1">libs/libgcc_s.so.1</asset>
+    <asset path="assets/libs/libstdc++.so.6">libs/libstdc++.so.6</asset>
+
+    <!-- The entry point.  It must be an ELF binary; a shell script is not
+         a valid BB10 application entry point. -->
+    <configuration name="Device-Debug">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="arm/o.le-v7-g/compas" entry="true" type="Qnx/Elf">compas</asset>
+    </configuration>
+    <configuration name="Device-Release">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="arm/o.le-v7-g/compas" entry="true" type="Qnx/Elf">compas</asset>
+    </configuration>
+
+    <!-- Ensure the bundled private libraries are found at run-time. -->
+    <env var="LD_LIBRARY_PATH" value="/app/native"/>
+
+    <initialWindow>
+        <autoOrients>true</autoOrients>
+        <systemChrome>none</systemChrome>
+    </initialWindow>
+
     <permissions>
         <permission>access_internet</permission>
         <permission>access_shared</permission>
         <permission>access_location_services</permission>
         <permission>read_device_identifying_information</permission>
     </permissions>
+
 </qnx>

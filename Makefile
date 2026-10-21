@@ -1,51 +1,72 @@
-# Makefile for Compas BB10 project
-# Orchestrates probe builds, libprobe library, and BAR packaging.
+# Top-level Makefile for the Compas BB10 project.
+#
+# This is a thin orchestrator.  Each subproject has its own build system:
+#
+#   probes/  -- CMake project producing the probe runner + probe binaries
+#   (root)   -- CMake project producing the Compas Maps application
+#
+# Everything is built with the XIAZY Clang toolchain inside Docker:
+#
+#   make build         # build the map application
+#   make build-probes  # build the probe suite
+#   make package       # package the map application BAR
+#   make package-probes# package the probe suite BAR
+#   make deploy BAR=...# deploy a BAR to a device in Development Mode
+#   make clean         # remove all build artefacts
+#
+# Override TOOLCHAIN_IMAGE to use a different container image.
 
-BUILD_DIR ?= build
-PROBES = filesystem_probe posix_probe thread_probe
-LIBPROBE = libprobe.so
+TOOLCHAIN_IMAGE ?= ghcr.io/xiazy/blackberry10-toolchain:latest
+ROOT_DIR        := $(CURDIR)
+BUILD_DIR       ?= build
 
-# The cross‑compiler can be overridden; default empty for local builds.
-CXX ?= arm-blackberry-qnx8eabi-g++
-CXXFLAGS ?= -O2 -g -Wall -Wextra -std=c++17 -pthread -fPIC -fexceptions -frtti
+BAR             ?= compas.bar
+DEVICE_IP       ?=
+DEVICE_PASSWORD ?=
 
-.PHONY: all clean build-probes package-bar
+.PHONY: all build build-probes package package-probes deploy clean
 
-all: build-probes $(LIBPROBE)
+all: build
 
-$(BUILD_DIR):
-	@mkdir -p $@
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
 
-# Build each probe executable
-$(BUILD_DIR)/%: probes/%.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $< -o $@
+build:
+	docker run --rm -v "$(ROOT_DIR)":/src -w /src $(TOOLCHAIN_IMAGE) bb10-build /src
 
-# Build the shared probe library (placeholder source provided)
-$(BUILD_DIR)/$(LIBPROBE): probes/plugin.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -shared $< -Wl,-soname,$(LIBPROBE) -o $@
+build-probes:
+	docker run --rm -v "$(ROOT_DIR)/probes":/src -w /src $(TOOLCHAIN_IMAGE) bb10-build /src
 
-# Ensure plugin.cpp exists (create a minimal stub if missing)
-probes/plugin.cpp:
-	@echo "// Minimal plugin for libprobe.so" > $@
-	@echo "extern \"C\" void __attribute__((constructor)) init() {}" >> $@
-	@echo "extern \"C\" void __attribute__((destructor)) fini() {}" >> $@
-	@echo "int main() {}" >> $@
+# ---------------------------------------------------------------------------
+# Package
+#
+# The BAR packager runs on the host directly; the descriptor's asset paths
+# are relative to the descriptor's own directory, so the working directory
+# matters.
+# ---------------------------------------------------------------------------
 
-# Build all probes and the library
-build-probes: $(patsubst probes/%.cpp,$(BUILD_DIR)/%,$(wildcard probes/*.cpp)) $(BUILD_DIR)/$(LIBPROBE)
+package: build
+	docker run --rm -v "$(ROOT_DIR)":/src -w /src/bar $(TOOLCHAIN_IMAGE) \
+		blackberry-nativepackager -devMode -package "$(BAR)" bar-descriptor.xml
 
-# Clean generated artefacts
+package-probes: build-probes
+	docker run --rm -v "$(ROOT_DIR)":/src -w /src/probes $(TOOLCHAIN_IMAGE) \
+		blackberry-nativepackager -devMode -package "compas-probes.bar" bar-descriptor.xml
+
+# ---------------------------------------------------------------------------
+# Deploy
+# ---------------------------------------------------------------------------
+
+deploy:
+	@test -n "$(DEVICE_IP)" || (echo "DEVICE_IP is required" && exit 1)
+	docker run --rm --network host -v "$(ROOT_DIR)":/src -w /src $(TOOLCHAIN_IMAGE) \
+		blackberry-deploy -installApp -device $(DEVICE_IP) -password $(DEVICE_PASSWORD) \
+		/src/$(BAR)
+
+# ---------------------------------------------------------------------------
+# Clean
+# ---------------------------------------------------------------------------
+
 clean:
-	@rm -rf $(BUILD_DIR)
-
-# Stub target representing BAR packaging.
-# In a full toolchain this would invoke blackberry‑deploy or docker‑builder.sh.
-package-bar: clean build-probes
-	@echo "=== BAR packaging stub ==="
-	@echo "Copy built artefacts to ./bar/ for later deployment:"
-	@mkdir -p bar/$(BUILD_DIR)
-	@cp $(BUILD_DIR)/$(PROBES) $(BUILD_DIR)/$(LIBPROBE) bar/$(BUILD_DIR)/
-	@echo "Packaging complete. (Run blackberry‑deploy or docker‑builder.sh to finish.)"
-
-# Convenience: run the full workflow with one command
-workflow: package-bar
+	rm -rf $(BUILD_DIR) probes/build

@@ -1,41 +1,57 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<qnx>
-  <id>com.compas.probes</id>
-  <filename>compas-probes</filename>
-  <name>Compas Probes</name>
-  <versionNumber>1.0.0</versionNumber>
-  <description>On-device compatibility probes for BlackBerry 10</description>
-  <author>Compas Project</author>
-  <authorId>compas</authorId>
-  <copyright>2025 Compas Project</copyright>
-  <category>utility.other</category>
-  <buildId>1</buildId>
-  <configuration>Device-Debug</configuration>
-  <icon>
-    <image>icon.png</image>
-  </icon>
-  <action>
-    <type>application</type>
-    <name>compas-probes</name>
-    <arg>compas-probes</arg>
-  </action>
-  <env>
-    <var name="LD_LIBRARY_PATH">/app/native/probes</var>
-  </env>
-  <assets>
-    <asset path="arm/o.le-v7-g/compas-probes">compas-probes</asset>
-    <asset path="assets">assets</asset>
+<qnx xmlns="http://www.qnx.com/schemas/application/1.0">
+
+    <!-- Universally unique application identifier. -->
+    <id>com.compas.probes</id>
+
+    <filename>compas-probes</filename>
+    <name>Compas Probes</name>
+    <versionNumber>1.0.0</versionNumber>
+    <buildId>1</buildId>
+
+    <description>On-device compatibility probes for BlackBerry 10</description>
+    <author>Compas Project</author>
+    <authorId>compas</authorId>
+    <copyright>2025 Compas Project</copyright>
+
+    <icon>
+        <image>icon.png</image>
+    </icon>
+
+    <!-- Bundled private runtime libraries. -->
+    <asset path="icon.png">icon.png</asset>
+    <asset path="assets/libs/libgcc_s.so.1">libs/libgcc_s.so.1</asset>
+    <asset path="assets/libs/libstdc++.so.6">libs/libstdc++.so.6</asset>
+
+    <!-- The probe executables and the plugin shared library. -->
     <asset path="assets/probes/filesystem_probe">probes/filesystem_probe</asset>
     <asset path="assets/probes/posix_probe">probes/posix_probe</asset>
     <asset path="assets/probes/thread_probe">probes/thread_probe</asset>
     <asset path="assets/probes/loader_probe">probes/loader_probe</asset>
     <asset path="assets/probes/libprobe.so">probes/libprobe.so</asset>
-    <asset path="assets/probes/libstdc++.so.6">probes/libstdc++.so.6</asset>
-    <asset path="assets/probes/libgcc_s.so.1">probes/libgcc_s.so.1</asset>
-    <asset path="assets/probes/run-probes.sh">run-probes.sh</asset>
-  </assets>
-  <permissions>
-    <permission>access_shared</permission>
-    <permission>read_device_identifying_information</permission>
-  </permissions>
+
+    <!-- The entry point.  It must be an ELF binary; a shell script is not
+         a valid BB10 application entry point. -->
+    <configuration name="Device-Debug">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="arm/o.le-v7-g/compas-probes" entry="true" type="Qnx/Elf">compas-probes</asset>
+    </configuration>
+    <configuration name="Device-Release">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="arm/o.le-v7-g/compas-probes" entry="true" type="Qnx/Elf">compas-probes</asset>
+    </configuration>
+
+    <!-- Ensure the bundled private libraries are found at run-time. -->
+    <env var="LD_LIBRARY_PATH" value="/app/native:/app/native/probes"/>
+
+    <initialWindow>
+        <autoOrients>true</autoOrients>
+        <systemChrome>none</systemChrome>
+    </initialWindow>
+
+    <permissions>
+        <permission>access_shared</permission>
+        <permission>read_device_identifying_information</permission>
+    </permissions>
+
 </qnx>
