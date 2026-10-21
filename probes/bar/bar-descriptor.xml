@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<qnx xmlns="http://www.qnx.com/schemas/application/1.0">
+  <id>com.compas.probes</id>
+  <filename>compas-probes</filename>
+  <name>Compas Probes</name>
+  <description>Probe binaries for hardware validation on BB10.</description>
+  <author>Compas Project</author>
+  <authorId>compas</authorId>
+  <copyright>2025 Compas Project</copyright>
+  <category>tools</category>
+  <buildId>1</buildId>
+  <configuration>Device-Debug</configuration>
+  <icon>
+    <image>icon.png</image>
+  </icon>
+  <action>
+    <type>application</type>
+    <name>compas-probes</name>
+    <arg>compas-probes</arg>
+  </action>
+  <env>
+    <var name="LD_LIBRARY_PATH">/app/native</var>
+  </env>
+  <assets>
+    <!-- Executable -->
+    <asset path="arm/o.le-v7-g/compas-probes">compas-probes</asset>
+    <!-- All assets directory -->
+    <asset path="assets">assets</asset>
+    <!-- BUNDLED libraries -->
+    <asset path="assets/libs/libgcc_s.so.1">libs/libgcc_s.so.1</asset>
+    <asset path="assets/libs/libstdc++.so.6">libs/libstdc++.so.6</asset>
+  </assets>
+  <permissions>
+    <permission>access_internet</permission>
+    <permission>access_shared</permission>
+    <permission>access_location_services</permission>
+    <permission>read_device_identifying_information</permission>
+  </permissions>
+</qnx>

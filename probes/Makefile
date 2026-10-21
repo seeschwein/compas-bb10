@@ -1,5 +1,5 @@
-CXX ?= arm-blackberry-qnx8eabi-g++
-CXXFLAGS ?= -O2 -g -Wall -Wextra -std=gnu++17 -pthread -fPIC -fexceptions -frtti -fno-use-cxa-atexit -static-libgcc -static-libstdc++
+CXX ?= bb10-c++
+CXXFLAGS ?= -O2 -g -Wall -Wextra -std=gnu++17 -pthread -fPIC -fexceptions -frtti -fno-use-cxa-atexit
 
 BUILD_DIR := build
 

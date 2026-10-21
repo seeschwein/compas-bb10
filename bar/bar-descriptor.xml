@@ -22,6 +22,11 @@
         <var name="LD_LIBRARY_PATH">/app/native</var>
     </env>
     <assets>
+    <!-- All assets directory -->
+        <asset path="assets">assets</asset>
+    <!-- BUNDLED libraries -->
+        <asset path="assets/libs/libgcc_s.so.1">libs/libgcc_s.so.1</asset>
+        <asset path="assets/libs/libstdc++.so.6">libs/libstdc++.so.6</asset>
         <asset path="arm/o.le-v7-g/compas">compas</asset>
         <asset path="assets">assets</asset>
     </assets>
