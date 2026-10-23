@@ -6,3 +6,6 @@ output/
 *.log
 device-stage/
 .DS_Store
+.claude/
+MEMORY.MD
+CLAUDE.MD
